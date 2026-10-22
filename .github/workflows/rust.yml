@@ -100,7 +100,8 @@ jobs:
             https://github.com/ultimate-research/nro-hook-plugin/releases/download/v0.4.0/libnro_hook.nro
           zip -r training_modpack_beta.zip atmosphere
       - name: Delete Release
-        run: gh release delete beta -y
+        # The release does not exist yet on a fresh fork
+        run: gh release delete beta -y || echo "No beta release to delete"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Release
