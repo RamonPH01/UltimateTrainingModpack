@@ -1,6 +1,7 @@
 //! Compact little-endian binary format for saving replay slots to the SD card
 
 use crate::frames::{CpuFrame, FighterSnapshot, MatchSnapshot};
+use crate::start::{FighterState, MatchState};
 
 pub const MAGIC: [u8; 4] = *b"UTMR";
 pub const VERSION: u8 = 1;
@@ -129,6 +130,56 @@ impl Codec for MatchSnapshot {
         Some(MatchSnapshot {
             player: FighterSnapshot::decode(input)?,
             cpu: FighterSnapshot::decode(input)?,
+        })
+    }
+}
+
+impl Codec for FighterState {
+    fn encode(&self, out: &mut Vec<u8>) {
+        for v in [
+            self.pos_x,
+            self.pos_y,
+            self.speed_x,
+            self.speed_y,
+            self.lr,
+            self.damage,
+            self.shield,
+            self.hitstun,
+        ] {
+            put_f32(out, v);
+        }
+        put_i32(out, self.status_kind);
+        put_i32(out, self.situation_kind);
+        put_i32(out, self.jumps_used);
+    }
+
+    fn decode(input: &mut &[u8]) -> Option<Self> {
+        Some(FighterState {
+            pos_x: take_f32(input)?,
+            pos_y: take_f32(input)?,
+            speed_x: take_f32(input)?,
+            speed_y: take_f32(input)?,
+            lr: take_f32(input)?,
+            damage: take_f32(input)?,
+            shield: take_f32(input)?,
+            hitstun: take_f32(input)?,
+            status_kind: take_i32(input)?,
+            situation_kind: take_i32(input)?,
+            jumps_used: take_i32(input)?,
+        })
+    }
+}
+
+impl Codec for MatchState {
+    fn encode(&self, out: &mut Vec<u8>) {
+        self.player.encode(out);
+        self.cpu.encode(out);
+    }
+
+    fn decode(input: &mut &[u8]) -> Option<Self> {
+        Some(MatchState {
+            player: FighterState::decode(input)?,
+            cpu: FighterState::decode(input)?,
         })
     }
 }

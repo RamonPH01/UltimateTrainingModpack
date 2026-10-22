@@ -111,3 +111,27 @@ fn record_playback_and_takeover_never_allocate() {
     // Sanity: the loop really recorded, played and took over
     assert!(events >= 2 * 5 * 3, "events: {events}");
 }
+
+#[test]
+fn ring_buffer_and_start_search_never_allocate() {
+    // The capture keeps the last frames in a preallocated ring buffer and searches it
+    // when the player marks a frame
+    const LEN: usize = 600;
+    let restorable = [0, 1];
+    let mut history = std::collections::VecDeque::with_capacity(LEN);
+    let mut found = 0;
+    let allocations = count_allocations(|| {
+        for i in 0..3 * LEN {
+            if history.len() == LEN {
+                history.pop_front();
+            }
+            let mut s = MatchState::default();
+            s.player.pos_x = (i % 50) as f32 * 0.5;
+            s.player.status_kind = if i % 7 == 0 { 0 } else { 39 };
+            history.push_back(s);
+            found += find_start(&history, history.len() - 1, 120, &restorable).is_some() as usize;
+        }
+    });
+    assert_eq!(allocations, 0);
+    assert!(found > 0);
+}

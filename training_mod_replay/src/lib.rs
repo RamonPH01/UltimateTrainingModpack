@@ -9,8 +9,10 @@
 
 pub mod codec;
 mod frames;
+pub mod start;
 pub use codec::{Codec, DecodeError};
 pub use frames::{CpuFrame, FighterSnapshot, MatchSnapshot};
+pub use start::{find_start, FighterState, MatchState, MAX_STEP};
 
 /// Identifies what a recording was made with: player fighter kind, CPU fighter kind, stage id.
 /// Playing a slot back with a different context makes no sense and is rejected.
