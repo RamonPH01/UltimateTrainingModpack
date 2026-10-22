@@ -272,6 +272,32 @@ Currently, hitboxes and grabboxes are supported. When visualization is active, o
 
 <a name="installation"/>
 
+# Installing this fork (Replay Takeover)
+
+This fork adds **Replay Takeover** to the Training Modpack: record both fighters from a save state, play the recording back, and take over your fighter or the CPU on any frame, like the replay takeover in modern fighting games.
+
+The fork replaces the original Training Modpack plugin; both can't be installed at the same time.
+
+1) Install Skyline (and Atmosphere on a Switch) as described in [Installation](#installation) below.
+2) Download `training_modpack_beta.zip` from the fork's [beta release](https://github.com/RamonPH01/UltimateTrainingModpack/releases/tag/beta). It is rebuilt automatically from `main` after every push.
+3) Extract the zip and copy the `atmosphere` folder onto the root of your SD card, merging it with the existing one. This overwrites `libtraining_modpack.nro` if the original modpack was installed. On an emulator, copy it into the emulator's SD card folder instead.
+4) Start Smash and open Training Mode. On the first start with this fork the modpack menu is reset to its defaults once, because new menu options were added.
+
+To go back to the original modpack, install the original release the same way; it overwrites the fork's `libtraining_modpack.nro`.
+
+## Using Replay Takeover
+
+| Action | Default combo | What happens |
+| --- | --- | --- |
+| Replay Record | ZR + DPad Left | Loads the save state and records both fighters. Press again to stop early. |
+| Replay Play | ZR + DPad Right | Loads the save state and plays the recording back. Press again to restart. |
+| Takeover | any button or stick | Takes over on that exact frame. Release the Replay Play combo first. |
+
+* Save States must be enabled and a save state must be saved before recording.
+* Settings are in the **Input Recording** tab: Replay Record Slot, Replay Play Slots, Replay Takeover Side (Player or CPU), Replay Duration and Replay Takeover On Input. The combos can be rebound in the **Button Config** tab.
+* Replays are kept in 5 slots on the SD card at `sd:/ultimate/TrainingModpack/replay_slot_N.bin` and survive restarts. A slot only plays back with the same fighters and stage it was recorded with.
+* "Desync on frame N" means the playback no longer matches the recording from that frame on. Save states don't store the full game state, so random elements (items, Peach turnips, Game & Watch Judge, random menu options) can cause this.
+
 # Installation
 
 The training modpack requires the following prerequisite packages:
