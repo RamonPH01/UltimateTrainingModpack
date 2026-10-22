@@ -37,6 +37,7 @@ toml = "0.5.9"
 training_mod_consts = { path = "training_mod_consts" }
 training_mod_sync = { path = "training_mod_sync" }
 training_mod_tui = { path = "training_mod_tui" }
+training_mod_replay = { path = "training_mod_replay" }
 native-tls = { version = "0.2.11", features = ["vendored"] }
 log = "0.4.17"
 byte-unit = "4.0.18"

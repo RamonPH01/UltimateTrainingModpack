@@ -41,6 +41,11 @@ jobs:
         with:
           command: test
           directory: training_mod_tui
+      - name: Replay Test
+        uses: ClementTsang/cargo-action@v0.0.3
+        with:
+          command: test
+          directory: training_mod_replay
   plugin:
     name: Plugin NRO
     runs-on: ubuntu-latest

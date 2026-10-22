@@ -13,6 +13,7 @@ use crate::common::offsets::OFFSET_SET_CPU_CONTROLS;
 use crate::common::{button_config, is_training_mode};
 use crate::common::{is_in_hitstun, is_in_shieldstun, try_get_module_accessor, MENU};
 use crate::training::mash;
+use crate::training::replay;
 use crate::training::ui::notifications::{clear_notification, color_notification};
 use crate::{error, warn};
 
@@ -399,7 +400,10 @@ pub unsafe fn is_input_neutral(input_frame: usize) -> bool {
     // Returns whether we should be done with standby this frame (if any significant controller input has been made)
     let current_record_slot = read(&CURRENT_RECORD_SLOT);
     let frame_input = read(&P1_FINAL_MAPPING)[current_record_slot][input_frame];
+    is_mapped_input_neutral(&frame_input)
+}
 
+pub fn is_mapped_input_neutral(frame_input: &MappedInputs) -> bool {
     let clamped_lstick_x =
         ((frame_input.lstick_x as f32) * STICK_CLAMP_MULTIPLIER).clamp(-1.0, 1.0);
     let clamped_lstick_y =
@@ -573,6 +577,9 @@ unsafe fn set_cpu_controls(p_data: *mut *mut u8) {
             *input_record_frame += 1;
         }
     }
+
+    // Runs last so a replay overrides AI and input playback
+    replay::handle_cpu_controls(controller_data);
 }
 
 pub fn is_playback() -> bool {
@@ -582,6 +589,11 @@ pub fn is_playback() -> bool {
 
 pub fn is_recording() -> bool {
     read(&INPUT_RECORD) == Record
+}
+
+/// No input recording, lockout or playback is running
+pub fn is_idle() -> bool {
+    read(&INPUT_RECORD) == None && read(&POSSESSION) == Player
 }
 
 pub unsafe fn is_standby() -> bool {

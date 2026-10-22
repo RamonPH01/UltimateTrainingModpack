@@ -45,6 +45,7 @@ pub mod input_delay;
 mod input_log;
 mod input_record;
 mod mash;
+mod replay;
 mod reset;
 pub mod save_states;
 mod shield_tilt;
@@ -109,7 +110,8 @@ pub unsafe fn handle_get_command_flag_cat(
     // Get throw directions
     flag |= throw::get_command_flag_throw_direction(module_accessor);
 
-    flag
+    // Record or replay the CPU's final command flags for Replay Takeover
+    replay::handle_command_flag_cat(module_accessor, category, flag)
 }
 
 #[skyline::from_offset(OFFSET_FIGHTER_VTABLE_ON_FRAME)]
@@ -141,6 +143,7 @@ fn once_per_frame_per_fighter(module_accessor: &mut BattleObjectModuleAccessor) 
                 *FIGHTER_INSTANCE_WORK_ID_FLAG_DISABLE_ESCAPE_PENALTY,
             );
             input_record::handle_recording();
+            replay::handle_frame();
             frame_counter::tick_ingame();
             tech::hide_tech();
         }
@@ -842,6 +845,9 @@ unsafe fn handle_final_input_mapping(
     // Potentially apply input recording, thus with delay
     // MUTATES controller state to apply recording or playback
     input_record::handle_final_input_mapping(player_idx, out);
+
+    // Replay Takeover runs last: it records the final inputs or replaces them with the replay
+    replay::handle_final_input_mapping(player_idx, out);
 }
 
 pub fn training_mods() {

@@ -90,6 +90,10 @@ pub struct TrainingModpackMenu {
     pub save_state_load: ButtonConfig,
     pub input_record: ButtonConfig,
     pub input_playback: ButtonConfig,
+    pub replay_record: ButtonConfig,
+    pub replay_play: ButtonConfig,
+    pub replay_duration: RecordingDuration,
+    pub replay_takeover_on_input: OnOff,
     pub recording_crop: OnOff,
     pub stale_dodges: OnOff,
     pub tech_hide: OnOff,
@@ -198,6 +202,18 @@ pub static BASE_MENU: TrainingModpackMenu = TrainingModpackMenu {
         DPAD_UP: 1,
         ..ButtonConfig::empty()
     },
+    replay_record: ButtonConfig {
+        ZR: 1,
+        DPAD_LEFT: 1,
+        ..ButtonConfig::empty()
+    },
+    replay_play: ButtonConfig {
+        ZR: 1,
+        DPAD_RIGHT: 1,
+        ..ButtonConfig::empty()
+    },
+    replay_duration: RecordingDuration::F600,
+    replay_takeover_on_input: OnOff::ON,
     recording_crop: OnOff::ON,
     stale_dodges: OnOff::ON,
     tech_hide: OnOff::OFF,
@@ -586,6 +602,20 @@ pub unsafe fn create_app<'a>() -> App<'a> {
         ToggleSingle,
         false,
     ));
+    input_recording_tab_submenus.push(RecordingDuration::to_submenu(
+        "Replay Duration",
+        "replay_duration",
+        "Maximum length of a Replay Takeover recording in frames",
+        ToggleSingle,
+        false,
+    ));
+    input_recording_tab_submenus.push(OnOff::to_submenu(
+        "Replay Takeover On Input",
+        "replay_takeover_on_input",
+        "Take over your fighter during a replay by pressing any button or moving the stick. When off, press the Replay Play combo again to restart instead",
+        ToggleSingle,
+        false,
+    ));
     let input_tab = Tab {
         id: "input",
         title: "Input Recording",
@@ -625,6 +655,20 @@ pub unsafe fn create_app<'a>() -> App<'a> {
         "Input Playback",
         "input_playback",
         "Hold any one button and press the others to trigger",
+        ToggleMultiple,
+        false,
+    ));
+    button_tab_submenus.push(ButtonConfig::to_submenu(
+        "Replay Record",
+        "replay_record",
+        "Load the save state and record both fighters for Replay Takeover. Press again to stop",
+        ToggleMultiple,
+        false,
+    ));
+    button_tab_submenus.push(ButtonConfig::to_submenu(
+        "Replay Play",
+        "replay_play",
+        "Load the save state and play back the replay. Any input takes over your fighter",
         ToggleMultiple,
         false,
     ));

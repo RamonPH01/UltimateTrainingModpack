@@ -33,6 +33,7 @@ use crate::training::character_specific::{ptrainer, steve};
 use crate::training::charge::{self, ChargeState};
 use crate::training::input_record;
 use crate::training::items::apply_item;
+use crate::training::replay;
 use crate::training::reset;
 use crate::training::ui::notifications;
 use crate::{is_ptrainer, ITEM_MANAGER_ADDR};
@@ -245,6 +246,20 @@ pub unsafe fn is_loading() -> bool {
     let selected_slot = get_slot();
     save_state_player(selected_slot).state != NoAction
         || save_state_cpu(selected_slot).state != NoAction
+}
+
+/// Load the current slot again without re-rolling random slots, so a replay
+/// always starts from the same situation it was recorded in
+pub unsafe fn request_load() {
+    let slot = get_slot();
+    save_state_player(slot).state = KillPlayer;
+    save_state_cpu(slot).state = KillPlayer;
+    MIRROR_STATE = should_mirror();
+    input_record::stop_playback();
+}
+
+pub unsafe fn mirror_state() -> f32 {
+    MIRROR_STATE
 }
 
 pub unsafe fn should_mirror() -> f32 {
@@ -464,6 +479,7 @@ pub unsafe fn save_states(module_accessor: &mut app::BattleObjectModuleAccessor)
         MIRROR_STATE = should_mirror();
         // end input recording playback
         input_record::stop_playback();
+        replay::cancel();
         return;
     }
 
@@ -651,6 +667,11 @@ pub unsafe fn save_states(module_accessor: &mut app::BattleObjectModuleAccessor)
         let prev_status_kind = StatusModule::prev_status_kind(module_accessor, 0);
         if prev_status_kind == FIGHTER_STATUS_KIND_REBIRTH && fighter_is_popo {
             save_state.state = NanaPosMove;
+        }
+
+        // Replay Takeover starts on its own once loading is done, see replay::handle_frame
+        if replay::is_active() {
+            return;
         }
 
         // if we're recording on state load, record

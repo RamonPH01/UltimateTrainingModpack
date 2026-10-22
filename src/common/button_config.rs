@@ -164,6 +164,8 @@ pub enum ButtonCombo {
     LoadState,
     InputRecord,
     InputPlayback,
+    ReplayRecord,
+    ReplayPlay,
 }
 
 pub const DEFAULT_OPEN_MENU_CONFIG: ButtonConfig = ButtonConfig {
@@ -180,6 +182,8 @@ unsafe fn get_combo_keys(combo: ButtonCombo) -> ButtonConfig {
         ButtonCombo::LoadState => read(&MENU).save_state_load,
         ButtonCombo::InputRecord => read(&MENU).input_record,
         ButtonCombo::InputPlayback => read(&MENU).input_playback,
+        ButtonCombo::ReplayRecord => read(&MENU).replay_record,
+        ButtonCombo::ReplayPlay => read(&MENU).replay_play,
     }
 }
 
@@ -191,6 +195,8 @@ static BUTTON_COMBO_REQUESTS: LazyLock<RwLock<HashMap<ButtonCombo, bool>>> = Laz
         (ButtonCombo::LoadState, false),
         (ButtonCombo::InputRecord, false),
         (ButtonCombo::InputPlayback, false),
+        (ButtonCombo::ReplayRecord, false),
+        (ButtonCombo::ReplayPlay, false),
     ]))
 });
 static START_HOLD_FRAMES: RwLock<u32> = RwLock::new(0);
