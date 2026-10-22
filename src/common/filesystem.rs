@@ -11,7 +11,12 @@ static WRITER: LazyLock<Sender<WriteMessage>> = LazyLock::new(|| {
     let (tx, rx) = mpsc::channel::<WriteMessage>();
     std::thread::spawn(move || {
         for job in rx {
-            match std::fs::write(job.path, job.contents) {
+            let result = if job.append {
+                append(job.path, &job.contents)
+            } else {
+                std::fs::write(job.path, job.contents)
+            };
+            match result {
                 Ok(()) => info!("Saved data to {}", job.path),
                 Err(e) => error!("Could not write data to {}: {e}", job.path),
             }
@@ -40,6 +45,16 @@ pub fn read_json<T: DeserializeOwned>(path: &str) -> Result<T> {
 struct WriteMessage {
     path: &'static str,
     contents: Vec<u8>,
+    append: bool,
+}
+
+fn append(path: &str, contents: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?
+        .write_all(contents)
 }
 
 pub fn write_toml<T: Serialize>(path: &'static str, data: &T) {
@@ -61,8 +76,23 @@ pub fn write_bytes(path: &'static str, contents: Vec<u8>) {
     send_write_message(path, contents);
 }
 
+/// Appends on the writer thread, creating the file if needed
+pub fn append_bytes(path: &'static str, contents: Vec<u8>) {
+    if let Err(e) = WRITER.send(WriteMessage {
+        path,
+        contents,
+        append: true,
+    }) {
+        error!("Could not queue append to {path}: {e}");
+    }
+}
+
 fn send_write_message(path: &'static str, contents: Vec<u8>) {
-    if let Err(e) = WRITER.send(WriteMessage { path, contents }) {
+    if let Err(e) = WRITER.send(WriteMessage {
+        path,
+        contents,
+        append: false,
+    }) {
         error!("Could not queue write to {path}: {e}");
     }
 }

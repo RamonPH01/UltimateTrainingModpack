@@ -128,6 +128,8 @@ fn once_per_frame_per_fighter(module_accessor: &mut BattleObjectModuleAccessor) 
         // Must run outside training mode to restore shield_damage_mul
         shield::param_installer();
 
+        crate::replay_probe::on_fighter_frame(module_accessor);
+
         if !is_training_mode() {
             return;
         }
@@ -167,6 +169,7 @@ unsafe extern "C" fn fighter_vtable_on_init_inner(fighter: &mut smash::app::Figh
 
 unsafe extern "C" fn fighter_vtable_on_init(fighter: &mut smash::app::Fighter, param_2: u64) {
     fighter_vtable_on_init_inner(fighter, param_2);
+    crate::replay_probe::on_fighter_init(fighter.battle_object.module_accessor);
     if !is_training_mode() {
         reset::check_reset(&mut *fighter.battle_object.module_accessor);
     }
@@ -820,6 +823,7 @@ unsafe fn handle_final_input_mapping(
 
     // Go through the original mapping function first
     original!()(mappings, player_idx, out, controller_struct, arg);
+    crate::replay_probe::on_final_input_mapping(player_idx, out, controller_struct);
     if !is_training_mode() {
         return;
     }

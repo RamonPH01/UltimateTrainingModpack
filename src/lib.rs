@@ -23,6 +23,7 @@ mod hitbox_visualizer;
 mod training;
 
 mod logging;
+mod replay_probe;
 
 fn nro_main(nro: &NroInfo<'_>) {
     if nro.module.isLoaded {
@@ -107,6 +108,8 @@ pub fn main() {
         })
         .expect("Couldn't create data loader thread");
     let _result = data_loader.join();
+
+    replay_probe::init();
 
     if !is_emulator() {
         info!("Performing version check...");
