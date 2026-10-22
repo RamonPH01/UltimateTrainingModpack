@@ -308,6 +308,15 @@ byteflags! {
 
 impl_submenutrait!(OnOff);
 
+byteflags! {
+    pub struct ReplayTakeoverSide {
+        pub PLAYER = "Player",
+        pub CPU = "CPU",
+    }
+}
+
+impl_submenutrait!(ReplayTakeoverSide);
+
 impl OnOff {
     pub fn from_val(val: u32) -> Option<Self> {
         match val {

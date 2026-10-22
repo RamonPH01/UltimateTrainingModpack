@@ -103,6 +103,7 @@ pub fn main() {
         .stack_size(0x20000)
         .spawn(move || {
             menu::load_from_file();
+            training::replay::load_from_file();
         })
         .expect("Couldn't create data loader thread");
     let _result = data_loader.join();

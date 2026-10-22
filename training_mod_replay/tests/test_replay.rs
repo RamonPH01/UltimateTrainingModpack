@@ -1,107 +1,11 @@
-use training_mod_replay::*;
-
-/// Stand-in for MappedInputs: one button flag and a horizontal stick
-#[derive(Clone, Copy, Default, Debug, PartialEq)]
-struct Pad {
-    button: bool,
-    x: i8,
-}
-
-impl Mirror for Pad {
-    fn mirrored(&self) -> Self {
-        Pad {
-            button: self.button,
-            x: self.x.saturating_neg(),
-        }
-    }
-}
-
-impl ReplayInput for Pad {
-    fn is_neutral(&self) -> bool {
-        !self.button && self.x == 0
-    }
-}
-
-/// Stand-in for the CPU controller data plus command flags
-#[derive(Clone, Copy, Default, Debug, PartialEq)]
-struct Cpu {
-    stick_x: f32,
-    cmd: i32,
-}
-
-impl Mirror for Cpu {
-    fn mirrored(&self) -> Self {
-        Cpu {
-            stick_x: -self.stick_x,
-            cmd: self.cmd,
-        }
-    }
-}
-
-const NEUTRAL: Pad = Pad {
-    button: false,
-    x: 0,
-};
-
-fn pad(x: i8) -> Pad {
-    Pad { button: false, x }
-}
-
-fn press() -> Pad {
-    Pad { button: true, x: 0 }
-}
-
-/// Runs one game frame the way the plugin hooks do: player input, CPU controls, advance
-fn frame(r: &mut Replay<Pad, Cpu>, live_p1: Pad, live_cpu: Cpu) -> (Pad, Cpu, Vec<ReplayEvent>) {
-    let mut events = Vec::new();
-    let (p1, ev) = r.on_player_input(live_p1);
-    events.extend(ev);
-    let cpu = if let Some(slot) = r.cpu_frame_mut() {
-        *slot = live_cpu;
-        live_cpu
-    } else {
-        r.cpu_playback().unwrap_or(live_cpu)
-    };
-    events.extend(r.advance());
-    (p1, cpu, events)
-}
-
-fn cpu(n: i32) -> Cpu {
-    Cpu {
-        stick_x: n as f32 / 10.0,
-        cmd: n,
-    }
-}
-
-/// Records `n` frames where P1 holds stick x = frame+1 and the CPU sends cmd = 100+frame
-fn recorded(n: usize) -> Replay<Pad, Cpu> {
-    let mut r = Replay::new(60);
-    assert_eq!(r.request(ReplayMode::Record), (true, None));
-    assert_eq!(r.on_state_loaded(1.0), Some(ReplayEvent::RecordingStarted));
-    for i in 0..n {
-        frame(&mut r, pad(i as i8 + 1), cpu(100 + i as i32));
-    }
-    assert_eq!(
-        r.request(ReplayMode::Record),
-        (false, Some(ReplayEvent::RecordingFinished { len: n }))
-    );
-    r
-}
-
-fn start_playback(r: &mut Replay<Pad, Cpu>, mirror: f32) {
-    assert_eq!(r.request(ReplayMode::Play), (true, None));
-    assert_eq!(r.state(), ReplayState::Arming(ReplayMode::Play));
-    assert_eq!(
-        r.on_state_loaded(mirror),
-        Some(ReplayEvent::PlaybackStarted)
-    );
-}
+mod common;
+use common::*;
 
 // --- Start and arming ---
 
 #[test]
 fn starts_idle_and_empty() {
-    let r: Replay<Pad, Cpu> = Replay::new(60);
+    let r: TestReplay = Replay::new(60);
     assert_eq!(r.state(), ReplayState::Idle);
     assert!(r.is_empty());
     assert!(!r.drives_cpu());
@@ -109,14 +13,17 @@ fn starts_idle_and_empty() {
 
 #[test]
 fn play_without_recording_is_rejected() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
-    assert_eq!(r.request(ReplayMode::Play), (false, None));
+    let mut r: TestReplay = Replay::new(60);
+    assert_eq!(
+        r.request(ReplayMode::Play),
+        (false, Some(ReplayEvent::Rejected(RejectReason::EmptySlot)))
+    );
     assert_eq!(r.state(), ReplayState::Idle);
 }
 
 #[test]
 fn record_request_waits_for_save_state_load() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     assert_eq!(r.request(ReplayMode::Record), (true, None));
     assert_eq!(r.state(), ReplayState::Arming(ReplayMode::Record));
     // Frames while the save state is still loading must not be recorded
@@ -130,14 +37,14 @@ fn record_request_waits_for_save_state_load() {
 
 #[test]
 fn state_load_without_request_does_nothing() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     assert_eq!(r.on_state_loaded(1.0), None);
     assert_eq!(r.state(), ReplayState::Idle);
 }
 
 #[test]
 fn requests_while_arming_are_ignored() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     r.request(ReplayMode::Record);
     assert_eq!(r.request(ReplayMode::Play), (false, None));
     assert_eq!(r.request(ReplayMode::Record), (false, None));
@@ -148,7 +55,7 @@ fn requests_while_arming_are_ignored() {
 
 #[test]
 fn recording_keeps_live_control_for_both_fighters() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     r.request(ReplayMode::Record);
     r.on_state_loaded(1.0);
     let (p1, c, _) = frame(&mut r, pad(42), cpu(7));
@@ -159,7 +66,7 @@ fn recording_keeps_live_control_for_both_fighters() {
 
 #[test]
 fn recording_stops_at_max_frames() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(5);
+    let mut r: TestReplay = Replay::new(5);
     r.request(ReplayMode::Record);
     r.on_state_loaded(1.0);
     let mut all = Vec::new();
@@ -173,7 +80,7 @@ fn recording_stops_at_max_frames() {
 
 #[test]
 fn set_max_frames_is_clamped_to_capacity() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(10);
+    let mut r: TestReplay = Replay::new(10);
     r.set_max_frames(1000);
     assert_eq!(r.max_frames(), 10);
     r.set_max_frames(3);
@@ -184,7 +91,7 @@ fn set_max_frames_is_clamped_to_capacity() {
 
 #[test]
 fn set_max_frames_is_ignored_while_active() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(10);
+    let mut r: TestReplay = Replay::new(10);
     r.request(ReplayMode::Record);
     r.on_state_loaded(1.0);
     r.set_max_frames(2);
@@ -206,7 +113,7 @@ fn new_recording_replaces_the_old_one() {
 
 #[test]
 fn cancel_during_recording_keeps_recorded_frames() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     r.request(ReplayMode::Record);
     r.on_state_loaded(1.0);
     frame(&mut r, pad(1), cpu(1));
@@ -217,7 +124,7 @@ fn cancel_during_recording_keeps_recorded_frames() {
 
 #[test]
 fn play_request_during_recording_is_ignored() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     r.request(ReplayMode::Record);
     r.on_state_loaded(1.0);
     assert_eq!(r.request(ReplayMode::Play), (false, None));
@@ -283,7 +190,7 @@ fn cancel_during_playback_returns_to_idle() {
 
 #[test]
 fn cancel_when_idle_does_nothing() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     assert_eq!(r.cancel(), None);
 }
 
@@ -415,7 +322,7 @@ fn mirrored_load_flips_both_tracks() {
 
 #[test]
 fn same_mirror_as_recording_does_not_flip() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     r.request(ReplayMode::Record);
     r.on_state_loaded(-1.0);
     frame(&mut r, pad(5), cpu(5));
@@ -426,7 +333,7 @@ fn same_mirror_as_recording_does_not_flip() {
 
 #[test]
 fn mirror_handles_extreme_stick_values() {
-    let mut r: Replay<Pad, Cpu> = Replay::new(60);
+    let mut r: TestReplay = Replay::new(60);
     r.request(ReplayMode::Record);
     r.on_state_loaded(1.0);
     frame(&mut r, pad(i8::MIN), cpu(0));

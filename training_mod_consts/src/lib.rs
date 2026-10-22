@@ -94,6 +94,9 @@ pub struct TrainingModpackMenu {
     pub replay_play: ButtonConfig,
     pub replay_duration: RecordingDuration,
     pub replay_takeover_on_input: OnOff,
+    pub replay_record_slot: RecordSlot,
+    pub replay_play_slots: PlaybackSlot,
+    pub replay_takeover_side: ReplayTakeoverSide,
     pub recording_crop: OnOff,
     pub stale_dodges: OnOff,
     pub tech_hide: OnOff,
@@ -214,6 +217,9 @@ pub static BASE_MENU: TrainingModpackMenu = TrainingModpackMenu {
     },
     replay_duration: RecordingDuration::F600,
     replay_takeover_on_input: OnOff::ON,
+    replay_record_slot: RecordSlot::S1,
+    replay_play_slots: PlaybackSlot::S1,
+    replay_takeover_side: ReplayTakeoverSide::PLAYER,
     recording_crop: OnOff::ON,
     stale_dodges: OnOff::ON,
     tech_hide: OnOff::OFF,
@@ -599,6 +605,27 @@ pub unsafe fn create_app<'a>() -> App<'a> {
         "Playback Loop",
         "playback_loop",
         "Repeat triggered input playbacks indefinitely",
+        ToggleSingle,
+        false,
+    ));
+    input_recording_tab_submenus.push(RecordSlot::to_submenu(
+        "Replay Record Slot",
+        "replay_record_slot",
+        "Choose which slot Replay Record saves into. Replays are kept on the SD card",
+        ToggleSingle,
+        false,
+    ));
+    input_recording_tab_submenus.push(PlaybackSlot::to_submenu(
+        "Replay Play Slots",
+        "replay_play_slots",
+        "Choose which slots Replay Play picks from. With several slots one is picked at random",
+        ToggleMultiple,
+        true,
+    ));
+    input_recording_tab_submenus.push(ReplayTakeoverSide::to_submenu(
+        "Replay Takeover Side",
+        "replay_takeover_side",
+        "Player: take over your fighter. CPU: take over the CPU with your controller while your fighter keeps replaying",
         ToggleSingle,
         false,
     ));

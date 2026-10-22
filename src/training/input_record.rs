@@ -584,7 +584,8 @@ unsafe fn set_cpu_controls(p_data: *mut *mut u8) {
 
 pub fn is_playback() -> bool {
     let input_record = read(&INPUT_RECORD);
-    input_record == Record || input_record == Playback
+    // A CPU-side replay takeover hands the CPU to the player like input recording does
+    input_record == Record || input_record == Playback || replay::player_controls_cpu()
 }
 
 pub fn is_recording() -> bool {

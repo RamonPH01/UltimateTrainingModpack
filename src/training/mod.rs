@@ -45,7 +45,7 @@ pub mod input_delay;
 mod input_log;
 mod input_record;
 mod mash;
-mod replay;
+pub mod replay;
 mod reset;
 pub mod save_states;
 mod shield_tilt;
@@ -100,7 +100,8 @@ pub unsafe fn handle_get_command_flag_cat(
     module_accessor: &mut BattleObjectModuleAccessor,
     category: i32,
 ) -> i32 {
-    let mut flag = original!()(module_accessor, category);
+    let ori = original!()(module_accessor, category);
+    let mut flag = ori;
 
     if !is_training_mode() {
         return flag;
@@ -111,7 +112,7 @@ pub unsafe fn handle_get_command_flag_cat(
     flag |= throw::get_command_flag_throw_direction(module_accessor);
 
     // Record or replay the CPU's final command flags for Replay Takeover
-    replay::handle_command_flag_cat(module_accessor, category, flag)
+    replay::handle_command_flag_cat(module_accessor, category, ori, flag)
 }
 
 #[skyline::from_offset(OFFSET_FIGHTER_VTABLE_ON_FRAME)]
@@ -143,7 +144,7 @@ fn once_per_frame_per_fighter(module_accessor: &mut BattleObjectModuleAccessor) 
                 *FIGHTER_INSTANCE_WORK_ID_FLAG_DISABLE_ESCAPE_PENALTY,
             );
             input_record::handle_recording();
-            replay::handle_frame();
+            replay::handle_frame(module_accessor);
             frame_counter::tick_ingame();
             tech::hide_tech();
         }

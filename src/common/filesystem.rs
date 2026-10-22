@@ -39,24 +39,29 @@ pub fn read_json<T: DeserializeOwned>(path: &str) -> Result<T> {
 
 struct WriteMessage {
     path: &'static str,
-    contents: String,
+    contents: Vec<u8>,
 }
 
 pub fn write_toml<T: Serialize>(path: &'static str, data: &T) {
     match toml::to_string_pretty(data) {
-        Ok(contents) => send_write_message(path, contents),
+        Ok(contents) => send_write_message(path, contents.into_bytes()),
         Err(e) => error!("Could not serialize data for {path}: {e}"),
     }
 }
 
 pub fn write_json<T: Serialize>(path: &'static str, data: &T) {
     match serde_json::to_string_pretty(data) {
-        Ok(contents) => send_write_message(path, contents),
+        Ok(contents) => send_write_message(path, contents.into_bytes()),
         Err(e) => error!("Could not serialize data for {path}: {e}"),
     }
 }
 
-fn send_write_message(path: &'static str, contents: String) {
+/// Writes on the writer thread so the game thread never waits for the SD card
+pub fn write_bytes(path: &'static str, contents: Vec<u8>) {
+    send_write_message(path, contents);
+}
+
+fn send_write_message(path: &'static str, contents: Vec<u8>) {
     if let Err(e) = WRITER.send(WriteMessage { path, contents }) {
         error!("Could not queue write to {path}: {e}");
     }
